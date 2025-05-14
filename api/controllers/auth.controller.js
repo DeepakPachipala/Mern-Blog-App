@@ -5,6 +5,7 @@ import { errorHandler } from "../utils/error.js";
 export const signup = async (req, res, next) => {
   const { username, email, password } = req.body;
 
+  // Check if all required fields are provided
   if (
     !username ||
     !email ||
@@ -13,21 +14,33 @@ export const signup = async (req, res, next) => {
     email === "" ||
     password === ""
   ) {
-    next(errorHandler(400, 'All fields are required'));
+    return res
+      .status(400)
+      .json({ success: false, message: "All fields are required" });
   }
 
-  const hashedPassword = bcryptjs.hashSync(password, 10);
-
-  const newUser = new User({
-    username,
-    email,
-    password: hashedPassword,
-  });
-
   try {
+    // Hash password and save user in the database
+    const hashedPassword = await bcryptjs.hash(password, 10);
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+    });
+
+    // Save the user to the database
     await newUser.save();
-    res.json("SignUp Successful");
+
+    // Send a successful response
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "SignUp Successful",
+        user: { username, email },
+      });
   } catch (error) {
-    next(error);
+    console.error(error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
